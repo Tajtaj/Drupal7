@@ -1,0 +1,4 @@
+name = Read Data
+description = A Custom module for reading data
+package = Custom
+core = 7.x

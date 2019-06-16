@@ -1,0 +1,175 @@
+<?php
+/*
+ * Implementation of hook_menu()
+ */
+function read_data_menu() {
+  $items['reading-source'] = array(
+    'title' => 'Reading Source data',
+    'description' => 'Gives Source data',
+    'page callback' => 'read_source',
+    'access arguments' => array('access content'),
+  );
+  $items['multiplefiltered-csv'] = array(
+    'title' => 'Multiple filter data',
+    'description' => 'Gives multiple filter data',
+    'page callback' => 'multiplefiltered_csv',
+    'access arguments' => array('access content'),
+  ); 
+  $items['sorting-data'] = array(
+    'title' => 'Sorting data',
+    'description' => 'Used to sort data',
+    'page callback' => 'sorting_data',
+    'access arguments' => array('access content'),
+  );
+  $items['joins-data'] = array(
+    'title' => 'Joins data',
+    'description' => 'Used to join data',
+    'page callback' => 'joins_data',
+    'access arguments' => array('access content'),
+  ); 
+  $items['removing-created-files'] = array(
+    'title' => 'Removing Created files',
+    'description' => 'Used to remove created files',
+    'page callback' => 'removing_created_files',
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+/*
+* Removing created files
+*/
+function removing_created_files(){
+  if ($_SERVER['REQUEST_METHOD'] != 'POST'){
+    return false;
+  }
+  $hiddenId = $_POST['hiddenId'];
+  $file = "sites/default/files/operator_files/".$hiddenId."_out.csv";
+  if (!unlink($file)) {
+    echo ("Error deleting $file");
+  }
+  else{
+    echo ("Deleted $file");
+  }
+}
+/*
+* Reading source data
+*/
+function read_source() {
+  if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+    return false;
+  }
+  $filename = $_POST['filename'];
+  $hiddenId = $_POST['hiddenId'];
+	$SourceFile = "sites/default/files/".$filename;
+	$outputFile = "sites/default/files/operator_files/".$hiddenId."_out.csv";
+	if (!copy($SourceFile, $outputFile)) {
+    echo "Failed to copy $SourceFile...\n";
+	}
+  echo $hiddenId."_out.csv";
+}
+
+/*
+* Multiple filtered data
+*/
+function multiplefiltered_csv() {
+  if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+   return false;
+  } 
+  $filename = $_POST["sourceJsonData"];
+  $attribute = $_POST["colnames"];
+  $filterType = $_POST["operators"];
+  $attrvalue = $_POST["required_values"];
+  $hiddenId = $_POST['hiddenId'];
+  $drupal_root = "C:\\xampp\\htdocs\\wiki3";
+  $filepath = $drupal_root."\\sites\\default\\files\\operator_files\\".$filename;
+  $createdFilterFile = $hiddenId."_out.csv";
+  $resultFile = $drupal_root."\\sites\\default\\files\\operator_files\\".$createdFilterFile;
+  $fullData = array(
+     "dataset" => $filepath,
+     "columNames" => $attribute,
+     "filterType" => $filterType,
+     "values" => $attrvalue,
+     "resultFile" => $resultFile
+   );
+  $exe_command = "Rscript C:\\xampp\\htdocs\\wiki3\\sites\\default\\files\\rcode\\multiFiltering.R ".base64_encode(json_encode($fullData));
+  //print "<pre>".print_r($exe_command,true)."</pre>";
+  exec($exe_command, $output,$result);
+  //print "<pre>".print_r($output,true)."</pre>";
+  if (!$result) {
+    echo $createdFilterFile;
+  } 
+  else {
+    echo "File is not created.";
+  }
+}
+
+/*
+* Sorting data
+*/
+function sorting_data() {
+  if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+   return false;
+  }
+  $filename = $_POST["sourceJsonData"];
+  $attribute = $_POST["colNames"];
+  $attrvalue = $_POST["attrValue"];
+  $hiddenId = $_POST['hiddenId'];
+
+  $drupal_root = "C:\\xampp\\htdocs\\wiki3";
+  $filepath = $drupal_root."\\sites\\default\\files\\operator_files\\".$filename;
+  $createdSortFile = $hiddenId."_out.csv";
+  $resultFile = $drupal_root."\\sites\\default\\files\\operator_files\\".$createdSortFile;
+  $fullData = array(
+     "dataset" => $filepath,
+     "columNames" => $attribute,
+     "values" => $attrvalue,
+     "resultFile" => $resultFile
+   );
+
+  $exe_command = "Rscript C:\\xampp\\htdocs\\wiki3\\sites\\default\\files\\rcode\\sorting.R ".base64_encode(json_encode($fullData));
+  exec($exe_command, $output,$result);
+  if (!$result) {
+    echo $createdSortFile;
+  } 
+  else {
+    echo "File is not created.";
+  }
+}
+
+/*
+* Joins data
+*/
+function joins_data() {
+  if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+   return false;
+  }
+  $filename1 = $_POST["sourceJsonData1"];
+  $filename2 = $_POST["sourceJsonData2"];
+  $joinType = $_POST["joinType"];
+  $hiddenId = $_POST['hiddenId'];
+  $drupal_root = "C:\\xampp\\htdocs\\wiki3";
+  $filepath1 = $drupal_root."\\sites\\default\\files\\operator_files\\".$filename1;
+  $filepath2 = $drupal_root."\\sites\\default\\files\\operator_files\\".$filename2;
+  $createdJoinFile = $hiddenId."_out.csv";
+  $resultFile = $drupal_root."\\sites\\default\\files\\operator_files\\".$createdJoinFile;
+  //$fullData = '{ "x":'.$filepath1.', "y":'.$filepath2.', "joinType":'.$joinType.',"resultFile":'.$resultFile.' }';
+  $fullData = array(
+   "x" => $filepath1,
+   "y" => $filepath2,
+   "joinType" => $joinType,
+   "resultFile" => $resultFile
+   );
+  $exe_command = "Rscript C:\\xampp\\htdocs\\wiki3\\sites\\default\\files\\rcode\\joins.R ".base64_encode(json_encode($fullData));
+  exec($exe_command, $output,$result);
+  // Result will return non-zero upon an error
+  if (!$result) {
+    echo $createdJoinFile;
+  } 
+  else {
+    echo "File is not created.";
+  }
+}
+
+   
